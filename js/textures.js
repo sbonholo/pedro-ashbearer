@@ -665,12 +665,29 @@
   AB.tex = {
     get SIZE() { return BIG(); },
     names: NAMES,
-    init() {
+    // init(progress?) -> Promise. Pre-builds the sets + cards the title level (act 1) needs, yielding to the browser
+    // every ~40 ms so the loading screen keeps animating and its progress bar moves (progress(0..1)). Actor-only sets
+    // are warmed after the first frame (idle time). Everything stays lazy-safe: get()/card() build on demand anyway.
+    async init(progress) {
       AB.bus.on('quality', onQuality);
-      // base sets that actors and props use right away; terrain layers build lazily at their first level load
-      for (const n of ['stone', 'bark', 'wood', 'cloth', 'leather', 'metal', 'skin', 'rock']) AB.tex.get(n);
-      noiseTex();
-      for (const c of ['leaves', 'pine', 'fern', 'flame', 'smoke']) card(c);
+      const jobs = [];
+      for (const n of ['stone', 'bark', 'wood', 'cloth', 'metal', 'rock', 'plaster', 'thatch', 'cobble', 'carving', 'basalt', 'grass', 'forest', 'mud', 'road']) jobs.push(() => AB.tex.get(n));
+      jobs.push(noiseTex);
+      for (const c of ['leaves', 'pine', 'fern', 'moss', 'banner', 'grass', 'flame', 'smoke', 'glint', 'shaft', 'mist']) jobs.push(() => card(c));
+      const yieldFrame = () => new Promise((res) => { let done = false; const f = () => { if (!done) { done = true; res(); } }; requestAnimationFrame(f); setTimeout(f, 30); });
+      let last = performance.now();
+      for (let i = 0; i < jobs.length; i++) {
+        jobs[i]();
+        if (progress) progress((i + 1) / jobs.length);
+        if (performance.now() - last > 40) { await yieldFrame(); last = performance.now(); }
+      }
+      // non-critical: actor-only sets, built when the browser is idle after the title is up
+      AB.bus.on('boot:done', () => {
+        const later = ['leather', 'skin'];
+        const idle = window.requestIdleCallback || ((fn) => setTimeout(fn, 200));
+        const next = () => { const n = later.shift(); if (!n) return; AB.tex.get(n); idle(next); };
+        idle(next);
+      });
     },
     // get(name, repeatX = 1, repeatY = repeatX) -> { map, normalMap, roughnessMap } (shared; clones share GPU images)
     get(name, rx = 1, ry = rx) {

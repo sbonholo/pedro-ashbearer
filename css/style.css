@@ -73,6 +73,7 @@ body { overscroll-behavior: none; -webkit-text-size-adjust: 100%; }
 .ab-loading-bar > span { display: block; height: 100%; background: linear-gradient(90deg, var(--ember), var(--gilt)); transform: scaleX(0); transform-origin: 0 50%; transition: transform 0.25s ease-out; }
 #ab-loading[data-boot] .ab-loading-bar { display: block; }
 #ab-loading[data-boot] .ab-loading-line { display: none; }
+#ab-loading[data-boot].is-done { opacity: 1; pointer-events: auto; }  /* boot holds the veil until the first frame is ready */
 .ab-loading-mark {
   width: 26px; height: 36px; margin-bottom: 6px; background: linear-gradient(160deg, #ffe2a8, var(--ember-hot) 30%, var(--ember) 60%, #8a2a0a);
   clip-path: polygon(50% 0, 100% 32%, 72% 100%, 28% 100%, 0 32%);

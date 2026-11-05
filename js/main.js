@@ -49,6 +49,10 @@
       AB.game.boot(data || {});
       mark('title');
       if (boot) boot.step(w + TITLE_W * 0.5, TOTAL_W);
+      // keep the veil up until the title has actually rendered (first frame compiles shaders and can stall),
+      // so the player never sees a frozen title screen
+      await new Promise((res) => { const t0 = performance.now(); const chk = () => (AB.loop.frame >= 2 || performance.now() - t0 > 10000 ? res() : requestAnimationFrame(chk)); chk(); });
+      mark('firstFrame');
       times.ready = Math.round(performance.now());
       if (boot) boot.done();
       AB.bus.emit('boot:done', {});
