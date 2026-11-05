@@ -206,9 +206,32 @@ AB.store = {
     low:    { tier: 'low',    shadows: true, shadowMapSize: 1024, foliageShadows: false, bloom: false, grass: 4000,  pixelRatio: 1,   msaa: 0, particles: 0.45, drawDistance: 180, detail: 0.5 }
   };
   const ORDER = ['low', 'medium', 'high'];
-  let coarse = false;
-  try { coarse = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches); } catch (e) { /* ignore */ }
-  const startTier = AB.settings.quality !== 'auto' && TIERS[AB.settings.quality] ? AB.settings.quality : (coarse ? 'medium' : 'high');
+  // First-launch auto preset: phones and low-end / software GPUs -> low, tablets -> medium, others -> high.
+  // Detected once and remembered (AUTO_KEY); the in-game fps measurement can still step it down.
+  const AUTO_KEY = 'ashbearer_v3_autotier';
+  function detectTier() {
+    let coarse = false, phone = false, gpu = '';
+    try { coarse = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches); } catch (e) { /* ignore */ }
+    const sw = Math.min(screen.width || 0, screen.height || 0) || Math.min(innerWidth, innerHeight);
+    phone = (coarse && sw <= 600) || /iPhone|iPod|Android.+Mobile|Mobile Safari/i.test(navigator.userAgent || '');
+    try {
+      const c = document.createElement('canvas');
+      const gl = c.getContext('webgl2') || c.getContext('webgl');
+      if (gl) {
+        const ext = gl.getExtension('WEBGL_debug_renderer_info');
+        gpu = String(ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER) || '');
+        const lose = gl.getExtension('WEBGL_lose_context'); if (lose) lose.loseContext();
+      }
+    } catch (e) { /* ignore */ }
+    const weakGpu = /swiftshader|llvmpipe|softpipe|software|basic render|mali-[2-4]|mali-t|adreno \(tm\) [2-5]\d\d|powervr|sgx|videocore|intel.*(hd graphics [2-5]\d{2,3}|gma)/i.test(gpu);
+    const mem = navigator.deviceMemory || 8, cores = navigator.hardwareConcurrency || 8;
+    if (phone || weakGpu || mem <= 2 || cores <= 2) return 'low';
+    if (coarse || mem <= 4 || cores <= 4) return 'medium';
+    return 'high';
+  }
+  let autoTier = AB.store.get(AUTO_KEY, null);
+  if (AB.settings.quality === 'auto' && !TIERS[autoTier]) { autoTier = detectTier(); AB.store.set(AUTO_KEY, autoTier); }
+  const startTier = AB.settings.quality !== 'auto' && TIERS[AB.settings.quality] ? AB.settings.quality : (TIERS[autoTier] ? autoTier : 'medium');
   const meas = { on: false, t: 0, frames: 0, rounds: 0 };
   AB.quality = {
     TIERS,
@@ -328,6 +351,12 @@ AB.store = {
     stop() { running = false; },
     get running() { return running; }
   };
+  // Pause the whole loop (sim + rendering) while the tab is hidden; resume where it left off on return.
+  let hiddenStop = false;
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) { if (running) { hiddenStop = true; loop.stop(); } }
+    else if (hiddenStop) { hiddenStop = false; acc = 0; loop.start(); }
+  });
   function tick(now) {
     if (!running) return;
     requestAnimationFrame(tick);
@@ -700,7 +729,7 @@ AB.store = {
       // portrait phones: keep ~37 deg of horizontal view (a fixed 52 deg vertical FOV is a 25 deg slit at 390x844)
       if (AB.cam) { const a = w / h; AB.cam.baseFov = a < 1 ? Math.min(74, 2 * Math.atan(Math.tan(26 * Math.PI / 180) / Math.sqrt(a)) * 180 / Math.PI) : 52; }
       if (!AB.renderer) return;
-      const pr = Math.min(window.devicePixelRatio || 1, AB.quality.settings.pixelRatio);
+      const pr = Math.min(window.devicePixelRatio || 1, AB.quality.settings.pixelRatio, 2);
       AB.renderer.setPixelRatio(pr);
       AB.renderer.setSize(w, h, false);
       core.canvas.style.width = w + 'px';
