@@ -813,3 +813,18 @@ kbd, .ab-keys kbd { display: inline-grid; place-items: center; min-width: 1.7em;
 @media (prefers-reduced-motion: reduce) {
   #ab-root *, #ab-root *::before, #ab-root *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
 }
+
+/* ======================================================================================
+   PHONE PASS (audit): tap targets >= 44px, text >= 12px. Visual size unchanged where a hit-area pseudo-element works.
+   ====================================================================================== */
+@media (pointer: coarse) {
+  /* name labels over the recruits on the pick screen: 28px pills get a 44px invisible hit area */
+  .ab-plabel::after { content: ''; position: absolute; left: -4px; right: -4px; top: 50%; height: 44px; transform: translateY(-50%); }
+  .ab-seg { min-height: 44px; min-width: 44px; }
+  .ab-toggle { min-height: 44px; }
+  .ab-range input[type="range"] { height: 44px; }
+}
+@media (max-width: 640px), (pointer: coarse) {
+  .hud-hope .hud-k, .hud-zone, .ab-hint-k, .hud-pm-k, .hud-slot kbd, .hud-pm.is-dead .hud-pm-down { font-size: 12px; }
+  #ab-ui small { font-size: max(12px, 0.83em); }
+}
