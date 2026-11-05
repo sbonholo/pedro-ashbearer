@@ -1,0 +1,18 @@
+{
+  "name": "ashbearer",
+  "private": true,
+  "version": "3.0.0",
+  "description": "Ashbearer - 3D fantasy party RPG by Pedro",
+  "scripts": {
+    "vendor": "node tools/vendor.mjs",
+    "build": "node tools/build.mjs",
+    "serve": "python3 -m http.server 8080"
+  },
+  "devDependencies": {
+    "@fontsource/alegreya": "5.3.0",
+    "@fontsource/alegreya-sans-sc": "5.3.0",
+    "@fontsource/grenze-gotisch": "5.3.0",
+    "esbuild": "0.28.2",
+    "three": "0.170.0"
+  }
+}
